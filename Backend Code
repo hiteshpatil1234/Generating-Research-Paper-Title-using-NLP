@@ -1,0 +1,632 @@
+!pip install transformers==4.33.2
+!pip install torch==2.0.1
+!pip install scikit-learn==1.2.2
+!pip install pandas==1.5.3
+
+
+from transformers import pipeline
+# Load a pre-trained model for text generation 
+generator = pipeline("text-generation", model="gpt2")
+
+
+def generate_research_title(topic, num_titles=3):
+    """Generates potential research paper titles for a given topic."""
+    prompt = f"Generate {num_titles} research paper titles about: {topic}"
+    generated_text = generator(prompt, max_length=50, num_return_sequences=num_titles, truncation=True)
+
+    titles = [result['generated_text'].split(topic)[-1].strip() for result in generated_text]
+    return titles
+
+
+    topic = "The impact of thermal management system in electric vehicle"
+generated_titles = generate_research_title(topic)
+
+print(f"Potential titles for '{topic}':")
+for i, title in enumerate(generated_titles):
+    print(f"{i+1}. {title}")
+
+
+    import pandas as pd
+from transformers import pipeline
+import random # Import the random module
+
+# Load the pre-trained model
+generator = pipeline("text-generation", model="gpt2")
+
+def generate_titles_for_topic(topic, num_titles_to_generate=1000, batch_size=10):
+    """Generates multiple potential research paper titles for a given topic."""
+    generated_titles = []
+    num_batches = num_titles_to_generate // batch_size
+
+    for _ in range(num_batches):
+        prompt = f"Generate {batch_size} research paper titles about: {topic}"
+        generated_text = generator(
+            prompt,
+            max_length=70,  # Increased max_length for potentially longer titles
+            num_return_sequences=batch_size,
+            truncation=True,
+            do_sample=True,  # Enable sampling for more diverse results
+            top_k=50,        # Consider the top 50 tokens
+            top_p=0.95,      # Sample from the most likely tokens
+            temperature=0.8  # Control the randomness of the generation
+        )
+
+        for result in generated_text:
+            title = result['generated_text'].replace(prompt, "").strip() # Remove the prompt from the generated text
+            if title: # Ensure the generated title is not empty
+                generated_titles.append({"topic": topic, "title": title})
+
+    return pd.DataFrame(generated_titles)
+
+# Define the topic
+topic = "The impact of thermal management system in electric vehicle"
+
+# Generate 1000 titles
+generated_titles_df = generate_titles_for_topic(topic, num_titles_to_generate=1000)
+
+# Display the first few generated titles
+print(generated_titles_df.head())
+
+# Save the dataset to a CSV file (optional)
+generated_titles_df.to_csv('electric_vehicle_titles_dataset.csv', index=False)
+
+
+import pandas as pd
+from transformers import pipeline
+
+# %%
+# 1. Install necessary libraries (if not already installed)
+# This cell is commented out as it was executed in the previous turn
+# !pip install transformers==4.33.2
+# !pip install torch==2.0.1
+# !pip install scikit-learn==1.2.2
+# !pip install pandas==1.5.3
+# %%
+
+# 2. Load a pre-trained model for text generation
+generator = pipeline("text-generation", model="gpt2")
+
+# %%
+# 3. Create a sample dataset (directly in the code)
+sample_data = {
+    'content': [
+        "This paper explores the use of deep learning for image recognition in medical diagnosis. We propose a new convolutional neural network architecture.",
+        "A study on the economic impact of renewable energy adoption in developing countries. We analyze data from several African nations.",
+        "Investigating the effects of social media on mental health in adolescents. A survey was conducted among high school students.",
+        "Development of a novel algorithm for anomaly detection in network traffic. The algorithm is based on unsupervised learning techniques.",
+        "Analyzing the performance of different battery technologies for electric vehicles. We compare lithium-ion, solid-state, and fuel cell batteries."
+    ],
+    'topic': [
+        "Deep Learning for Medical Image Recognition",
+        "Economic Impact of Renewable Energy",
+        "Social Media and Adolescent Mental Health",
+        "Anomaly Detection in Network Traffic",
+        "Battery Technologies for Electric Vehicles"
+    ]
+}
+
+sample_df = pd.DataFrame(sample_data)
+
+# Display the sample dataset
+print("Sample Dataset:")
+print(sample_df)
+
+# %%
+# 4. Define a function to generate titles based on the topic
+def generate_research_title(topic, num_titles=3):
+    """Generates potential research paper titles for a given topic."""
+    prompt = f"Generate {num_titles} research paper titles about: {topic}"
+    generated_text = generator(prompt, max_length=60, num_return_sequences=num_titles, truncation=True)
+
+    titles = [result['generated_text'].split(topic)[-1].strip() for result in generated_text]
+    return titles
+
+# %%
+# 5. Generate titles for each topic in the sample dataset
+print("\nGenerated Titles:")
+for index, row in sample_df.iterrows():
+    topic = row['topic']
+    generated_titles = generate_research_title(topic, num_titles=2) # Generate 2 titles per topic
+
+    print(f"\nTopic: {topic}")
+    for i, title in enumerate(generated_titles):
+        print(f"  {i+1}. {title}")
+
+# %%
+# You could also generate titles based on the 'content' column,
+# but this often requires more advanced prompting or fine-tuning.
+# For simplicity, we are generating based on the 'topic' column here.
+# If you wanted to use 'content', you would modify the generate_research_title function
+# to take content as input and adjust the prompt accordingly.
+
+# Example of how you *might* start to use content (more complex prompting needed):
+# def generate_title_from_content(content):
+#    prompt = f"Generate a research paper title for a paper with the following content:\n{content}\nTitle:"
+#    generated_text = generator(prompt, max_length=50, num_return_sequences=1, truncation=True)
+#    title = generated_text[0]['generated_text'].replace(prompt, "").strip()
+#    return title
+
+# print("\nGenerated Titles (based on content - experimental):")
+# for index, row in sample_df.iterrows():
+#     content = row['content']
+#     generated_title_from_content = generate_title_from_content(content)
+#     print(f"Content: {content[:50]}...") # Print first 50 chars of content
+#     print(f"  Generated Title: {generated_title_from_content}")
+
+
+"""
+A python program to retreive recrods from ArXiv.org in given
+categories and specific date range.
+
+"""
+from __future__ import print_function
+import xml.etree.ElementTree as ET
+import datetime
+import time
+import sys
+PYTHON3 = sys.version_info[0] == 3
+if PYTHON3:
+    from urllib.parse import urlencode
+    from urllib.request import urlopen
+    from urllib.error import HTTPError
+else:
+    from urllib import urlencode
+    from urllib2 import HTTPError, urlopen
+OAI = '{http://www.openarchives.org/OAI/2.0/}'
+ARXIV = '{http://arxiv.org/OAI/arXiv/}'
+BASE = 'http://export.arxiv.org/oai2?verb=ListRecords&'
+
+class Record(object):
+    """
+    A class to hold a single record from ArXiv
+    Each records contains the following properties:
+
+    object should be of xml.etree.ElementTree.Element.
+    """
+
+    def __init__(self, xml_record):
+        """if not isinstance(object,ET.Element):
+        raise TypeError("")"""
+        self.xml = xml_record
+        self.id = self._get_text(ARXIV, 'id')
+        self.url = 'https://arxiv.org/abs/' + self.id
+        self.title = self._get_text(ARXIV, 'title')
+        self.abstract = self._get_text(ARXIV, 'abstract')
+        self.cats = self._get_text(ARXIV, 'categories')
+        self.created = self._get_text(ARXIV, 'created')
+        self.updated = self._get_text(ARXIV, 'updated')
+        self.doi = self._get_text(ARXIV, 'doi')
+        self.authors = self._get_authors()
+
+    def _get_text(self, namespace, tag):
+        """Extracts text from an xml field"""
+        try:
+            return self.xml.find(namespace + tag).text.strip().lower().replace('\n', ' ')
+        except:
+            return ''
+
+    def _get_authors(self):
+        authors = self.xml.findall(ARXIV + 'authors/' + ARXIV + 'author')
+        authors = [author.find(ARXIV + 'keyname').text.lower() for author in authors]
+        return authors
+
+    def output(self):
+        d = {'title': self.title,
+         'id': self.id,
+         'abstract': self.abstract,
+         'categories': self.cats,
+         'doi': self.doi,
+         'created': self.created,
+         'updated': self.updated,
+         'authors': self.authors,
+         'url': self.url}
+        return d
+
+
+class Scraper(object):
+    """
+    A class to hold info about attributes of scraping,
+    such as date range, categories, and number of returned
+    records. If `from` is not provided, the first day of
+    the current month will be used. If `until` is not provided,
+    the current day will be used.
+
+    Paramters
+    ---------
+    category: str
+    The category of scraped records
+    data_from: str
+    starting date in format 'YYYY-MM-DD'. Updated eprints are included even if
+    they were created outside of the given date range. Default: first day of current month.
+    date_until: str
+    final date in format 'YYYY-MM-DD'. Updated eprints are included even if
+    they were created outside of the given date range. Default: today.
+    t: int
+    Waiting time between subsequent calls to API, triggred by Error 503.
+    filter: dictionary
+    A dictionary where keys are used to limit the saved results. Possible keys:
+    subcats, author, title, abstract. See the example, below.
+
+    Example:
+    Returning all eprints from
+    """
+
+    def __init__(self, category, date_from=None, date_until=None, t=30, filters={}):
+        self.cat = str(category)
+        self.t = t
+        DateToday = datetime.date.today()
+        if date_from is None:
+            self.f = str(DateToday.replace(day=1))
+        else:
+            self.f = date_from
+        if date_until is None:
+            self.u = str(DateToday)
+        else:
+            self.u = date_until
+        self.url = BASE + 'from=' + self.f + '&until=' + self.u + '&metadataPrefix=arXiv&set=%s' % self.cat
+        self.filters = filters
+        if not self.filters:
+            self.append_all = True
+        else:
+            self.append_all = False
+            self.keys = filters.keys()
+
+    def scrape(self):
+        t0 = time.time()
+        url = self.url
+        print(url)
+        ds = []
+        k = 1
+        while True:
+            print('fetching up to ', 1000 * k, 'records...')
+            try:
+                response = urlopen(url)
+            except HTTPError as e:
+                if e.code == 503:
+                    to = int(e.hdrs.get('retry-after', 30))
+                    print('Got 503. Retrying after {0:d} seconds.'.format(self.t))
+                    time.sleep(self.t)
+                    continue
+                else:
+                    raise
+            k += 1
+            xml = response.read()
+            root = ET.fromstring(xml)
+            records = root.findall(OAI + 'ListRecords/' + OAI + 'record')
+            for record in records:
+                meta = record.find(OAI + 'metadata').find(ARXIV + 'arXiv')
+                record = Record(meta).output()
+                if self.append_all:
+                    ds.append(record)
+                else:
+                    save_record = False
+                    for key in self.keys:
+                        for word in self.filters[key]:
+                            if word.lower() in record[key]:
+                                save_record = True
+
+                    if save_record:
+                        ds.append(record)
+
+            try:
+                token = root.find(OAI + 'ListRecords').find(OAI + 'resumptionToken')
+            except:
+                return 1
+            if token is None or token.text is None:
+                break
+            else:
+                url = BASE + 'resumptionToken=%s' % token.text
+
+        t1 = time.time()
+        print('fetching is completed in {0:.1f} seconds.'.format(t1 - t0))
+        print ('Total number of records {:d}'.format(len(ds)))
+        return ds
+
+
+def search_all(df, col, *words):
+    """
+    Return a sub-DataFrame of those rows whose Name column match all the words.
+    source: https://stackoverflow.com/a/22624079/3349443
+    """
+    return df[np.logical_and.reduce([df[col].str.contains(word) for word in words])]
+
+
+cats = [
+ 'astro-ph', 'cond-mat', 'gr-qc', 'hep-ex', 'hep-lat', 'hep-ph', 'hep-th',
+ 'math-ph', 'nlin', 'nucl-ex', 'nucl-th', 'physics', 'quant-ph', 'math', 'CoRR', 'q-bio',
+ 'q-fin', 'stat']
+subcats = {'cond-mat': ['cond-mat.dis-nn', 'cond-mat.mtrl-sci', 'cond-mat.mes-hall',
+              'cond-mat.other', 'cond-mat.quant-gas', 'cond-mat.soft', 'cond-mat.stat-mech',
+              'cond-mat.str-el', 'cond-mat.supr-con'],
+ 'hep-th': [],'hep-ex': [],'hep-ph': [],
+ 'gr-qc': [],'quant-ph': [],'q-fin': ['q-fin.CP', 'q-fin.EC', 'q-fin.GN',
+           'q-fin.MF', 'q-fin.PM', 'q-fin.PR', 'q-fin.RM', 'q-fin.ST', 'q-fin.TR'],
+
+ 'nucl-ex': [],'CoRR': [],'nlin': ['nlin.AO', 'nlin.CG', 'nlin.CD', 'nlin.SI',
+          'nlin.PS'],
+ 'physics': ['physics.acc-ph', 'physics.app-ph', 'physics.ao-ph',
+             'physics.atom-ph', 'physics.atm-clus', 'physics.bio-ph', 'physics.chem-ph',
+             'physics.class-ph', 'physics.comp-ph', 'physics.data-an', 'physics.flu-dyn',
+             'physics.gen-ph', 'physics.geo-ph', 'physics.hist-ph', 'physics.ins-det',
+             'physics.med-ph', 'physics.optics', 'physics.ed-ph', 'physics.soc-ph',
+             'physics.plasm-ph', 'physics.pop-ph', 'physics.space-ph'],
+ 'math-ph': [],
+ 'math': ['math.AG', 'math.AT', 'math.AP', 'math.CT', 'math.CA', 'math.CO',
+          'math.AC', 'math.CV', 'math.DG', 'math.DS', 'math.FA', 'math.GM', 'math.GN',
+          'math.GT', 'math.GR', 'math.HO', 'math.IT', 'math.KT', 'math.LO', 'math.MP',
+          'math.MG', 'math.NT', 'math.NA', 'math.OA', 'math.OC', 'math.PR', 'math.QA',
+          'math.RT', 'math.RA', 'math.SP', 'math.ST', 'math.SG'],
+ 'q-bio': ['q-bio.BM',
+           'q-bio.CB', 'q-bio.GN', 'q-bio.MN', 'q-bio.NC', 'q-bio.OT', 'q-bio.PE', 'q-bio.QM',
+           'q-bio.SC', 'q-bio.TO'],
+ 'nucl-th': [],'stat': ['stat.AP', 'stat.CO', 'stat.ML',
+          'stat.ME', 'stat.OT', 'stat.TH'],
+ 'hep-lat': [],'astro-ph': ['astro-ph.GA',
+              'astro-ph.CO', 'astro-ph.EP', 'astro-ph.HE', 'astro-ph.IM', 'astro-ph.SR']
+ }
+
+
+ import tweepy #https://github.com/tweepy/tweepy
+import csv
+import pandas as pd
+import re
+
+
+def get_all_tweets(screen_name):
+    #Twitter only allows access to a users most recent 3240 tweets with this method
+
+    #Twitter API credentials
+    consumer_key = ""
+    consumer_secret = ""
+    access_key = ""
+    access_secret = ""
+
+    #authorize twitter, initialize tweepy
+    auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
+    auth.set_access_token(access_key, access_secret)
+    api = tweepy.API(auth)
+
+    #initialize a list to hold all the tweepy Tweets
+    alltweets = []
+
+    #make initial request for most recent tweets (200 is the maximum allowed count)
+    new_tweets = api.user_timeline(screen_name = screen_name,count=200)
+
+    #save most recent tweets
+    alltweets.extend(new_tweets)
+
+    #save the id of the oldest tweet less one
+    oldest = alltweets[-1].id - 1
+
+    #keep grabbing tweets until there are no tweets left to grab
+    while len(new_tweets) > 0:
+        print(f"getting tweets before {oldest}")
+
+        #all subsiquent requests use the max_id param to prevent duplicates
+        new_tweets = api.user_timeline(screen_name = screen_name,count=200,max_id=oldest)
+
+        #save most recent tweets
+        alltweets.extend(new_tweets)
+
+        #update the id of the oldest tweet less one
+        oldest = alltweets[-1].id - 1
+
+        print(f"...{len(alltweets)} tweets downloaded so far")
+
+    #transform the tweepy tweets into a 2D array that will populate the csv
+    outtweets = [[tweet.id_str, tweet.created_at, tweet.text] for tweet in alltweets]
+
+    #write the csv
+    with open(f'new_{screen_name}_tweets.csv', 'w') as f:
+        writer = csv.writer(f)
+        writer.writerow(["id","created_at","text"])
+        writer.writerows(outtweets)
+
+    pass
+
+def clean_csv(fname='new_SICKOFWOLVES_tweets.csv'):
+    df = pd.read_csv(fname)
+    df = df.dropna()
+    df = df[~df['text'].str.contains('STORE')]
+    df = df[~df['text'].str.startswith('@')]
+    df['text'] = df['text'].str.replace('\n', ' ')
+    df['text'] = df['text'].apply(lambda x: re.split('https:\/\/.*', str(x))[0]) # remove urls
+    df['text'] = df["text"].apply(lambda x:''.join([" " if ord(i) < 32 or ord(i) > 126 # remove non-ascii
+                                                    else i for i in x]))
+    df['text'].to_csv('titles.csv', index=False, header=False)
+
+
+    import pandas as pd
+import torch
+from transformers import GPT2LMHeadModel, GPT2Tokenizer
+import matplotlib.pyplot as plt
+
+# ✅ Load dataset safely
+df = pd.read_csv("/arXiv_scientific dataset.csv", low_memory=False, on_bad_lines='skip')
+
+# ✅ Display dataset info
+print("Dataset shape:", df.shape)
+print("Columns:", df.columns)
+
+# ✅ Use 'title' and 'summary' instead of 'abstract'
+df = df[['title', 'summary']].dropna().head(1000)  # Reduce size for demo
+
+# ✅ Sample abstract and title
+sample_summary = df['summary'].iloc[0]
+sample_title = df['title'].iloc[0]
+print("\nSample Summary:\n", sample_summary)
+print("\nActual Title:\n", sample_title)
+
+# ✅ Load GPT-2 tokenizer and model
+tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
+model = GPT2LMHeadModel.from_pretrained("gpt2")
+
+# ✅ Function to generate title
+def generate_title(summary_text, max_length=25):
+    prompt = "Research Title: " + summary_text[:500]
+    inputs = tokenizer.encode(prompt, return_tensors="pt", truncation=True)
+
+    outputs = model.generate(
+        inputs,
+        max_length=max_length,
+        num_return_sequences=1,
+        do_sample=True,
+        top_k=50,
+        temperature=0.7,
+        pad_token_id=tokenizer.eos_token_id
+    )
+
+    generated = tokenizer.decode(outputs[0], skip_special_tokens=True)
+    return generated.split("Research Title:")[-1].strip()
+
+# ✅ Generate title for sample
+generated_title = generate_title(sample_summary)
+
+# ✅ Print both titles
+print("\nGenerated Title:\n", generated_title)
+
+# ✅ Visualize input-output
+fig, ax = plt.subplots(figsize=(12, 6))
+ax.axis("off")
+text = f"Input Summary (shortened):\n{sample_summary[:300]}...\n\nActual Title:\n{sample_title}\n\nGenerated Title:\n{generated_title}"
+ax.text(0, 0.5, text, fontsize=12, wrap=True)
+plt.title("Research Paper Title Generation", fontsize=14)
+plt.tight_layout()
+plt.show()
+
+
+import pandas as pd
+import torch
+from transformers import GPT2LMHeadModel, GPT2Tokenizer
+import matplotlib.pyplot as plt
+
+# ✅ Load dataset
+df = pd.read_csv("/arXiv_scientific dataset.csv", low_memory=False, on_bad_lines='skip')
+
+# ✅ Use relevant columns
+df = df[['title', 'summary']].dropna().head(1000)
+
+# ✅ Sample input
+sample_summary = df['summary'].iloc[0]
+sample_title = df['title'].iloc[0]
+print("\nSample Summary:\n", sample_summary)
+print("\nActual Title:\n", sample_title)
+
+# ✅ Load GPT-2 tokenizer and model
+tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
+model = GPT2LMHeadModel.from_pretrained("gpt2")
+
+# ✅ Fixed generation function using `max_new_tokens`
+def generate_title(summary_text, max_new_tokens=20):
+    prompt = "Research Title: " + summary_text[:300]  # Shorten prompt if needed
+    inputs = tokenizer.encode(prompt, return_tensors="pt", truncation=True)
+
+    outputs = model.generate(
+        inputs,
+        max_new_tokens=max_new_tokens,
+        num_return_sequences=1,
+        do_sample=True,
+        top_k=50,
+        temperature=0.7,
+        pad_token_id=tokenizer.eos_token_id
+    )
+
+    generated = tokenizer.decode(outputs[0], skip_special_tokens=True)
+    return generated.split("Research Title:")[-1].strip()
+
+# ✅ Generate title
+generated_title = generate_title(sample_summary)
+
+# ✅ Display generated vs actual
+print("\nGenerated Title:\n", generated_title)
+
+# ✅ Plot comparison
+fig, ax = plt.subplots(figsize=(12, 6))
+ax.axis("off")
+text = f"Input Summary (shortened):\n{sample_summary[:300]}...\n\nActual Title:\n{sample_title}\n\nGenerated Title:\n{generated_title}"
+ax.text(0, 0.5, text, fontsize=12, wrap=True)
+plt.title("Research Paper Title Generation", fontsize=14)
+plt.tight_layout()
+plt.show()
+
+
+from IPython.core.display import display, HTML
+
+html_code = """
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Research Title Generator</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 40px;
+      background-color: #f4f4f4;
+    }
+    textarea, input {
+      width: 100%;
+      padding: 10px;
+      margin: 15px 0;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }
+    button {
+      padding: 10px 20px;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    #result {
+      margin-top: 20px;
+      padding: 15px;
+      background: white;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Generate a Research Paper Title</h1>
+
+  <label for="summary">Enter Research Summary:</label>
+  <textarea id="summary" rows="6" placeholder="Type your research paper summary here..."></textarea>
+
+  <button onclick="generateTitle()">Generate Title</button>
+
+  <div id="result"></div>
+
+  <script>
+    async function generateTitle() {
+      const summary = document.getElementById('summary').value;
+      if (!summary.trim()) {
+        alert("Please enter a research summary.");
+        return;
+      }
+
+      const response = await fetch('https://xxxx.ngrok.io/generate-title', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ summary: summary })
+      });
+
+      if (!response.ok) {
+        document.getElementById('result').innerHTML = "Error: Could not fetch title.";
+        return;
+      }
+
+      const data = await response.json();
+      document.getElementById('result').innerHTML = `<strong>Generated Title:</strong> ${data.title}`;
+    }
+  </script>
+
+</body>
+</html>
+"""
+
+display(HTML(html_code))
+
